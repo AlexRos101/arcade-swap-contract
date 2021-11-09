@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const keccak256 = require('keccak256')
+const keccak256 = require('keccak256');
 
 describe('Swap setting without owner', function () {
   it('Swap setting should be failed.', async function () {
