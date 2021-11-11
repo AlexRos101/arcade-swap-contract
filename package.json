@@ -4,20 +4,40 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx hardhat test",
+    "compile": "npx hardhat compile --force",
+    "deploy:testnet": "npx hardhat run scripts/deploy.js --network testnet",
+    "deploy:mainnet": "npx hardhat run scripts/deploy.js --network mainnet",
+    "upgrade:testnet": "npx hardhat run scripts/deploy-upgrade.js --network testnet",
+    "upgrade:mainnet": "npx hardhat run scripts/deploy-upgrade.js --network mainnet",
+    "fork:testnet": "npx hardhat node --fork $(dotenv -p MORALIS_BSC_TESTNET_ARCHIVE_URL) --fork-block-number 12585457",
+    "fork:mainnet": "npx hardhat node --fork $(dotenv -p MORALIS_BSC_MAINNET_ARCHIVE_URL) --fork-block-number 11134446"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-etherscan": "^2.1.7",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.3.2",
-    "@openzeppelin/hardhat-upgrades": "^1.12.0",
     "chai": "^4.3.4",
+    "dotenv": "^10.0.0",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-plugin-import": "^2.25.2",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^3.4.1",
+    "eslint-plugin-promise": "^5.1.1",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.1",
     "hardhat": "^2.6.8",
-    "keccak256": "^1.0.3"
+    "hardhat-gas-reporter": "^1.0.4",
+    "prettier": "^2.4.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.18",
+    "solhint": "^3.3.6",
+    "solidity-coverage": "^0.7.17",
+    "web3-utils": "^1.6.0"
   }
 }

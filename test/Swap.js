@@ -1,111 +1,193 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
-const keccak256 = require('keccak256');
+const { soliditySha3 } = require("web3-utils");
 
 describe('Swap setting without owner', function () {
   it('Swap setting should be failed.', async function () {
     const [owner, addr1] = await ethers.getSigners();
 
+    const tempAddress = addr1.address;
+
     const Swap = await ethers.getContractFactory('ArcadeDogeSwap');
 
-    const hardhatSwap = await Swap.deploy();
+    const hardhatSwap = 
+      await Swap.deploy(tempAddress, tempAddress, tempAddress, tempAddress);
 
-    await hardhatSwap.connect(addr1).setArcadeDogeBackendKey('ABC');
+    await expect(hardhatSwap.connect(addr1).setArcadeDogeBackendKey('ABC'))
+      .to.be.revertedWith("Ownable: caller is not the owner");
   });
 });
 
-describe('Deposit and Withdraw ArcadeDoge token on Swap contract', function() {
-  it('Should be successed', async function() {
-    const [owner, addr1, addr2] = await ethers.getSigners();
+describe('Deposit and Withdraw ArcadeDoge token on Swap contract', function () {
+  beforeEach(async function () {
+    const [owner, addr1] = await ethers.getSigners();
 
-    const Token = await ethers.getContractFactory('ArcadeDoge');
-    const hardhatToken = await Token.deploy('1000000000000000000000');
+    const tempAddress = addr1.address;
 
-    const Swap = await ethers.getContractFactory('ArcadeDogeSwap');
-    const hardhatSwap = await Swap.deploy();
-    
-    await hardhatSwap.setArcadeDogeTokenAddress(hardhatToken.address);
+    const Token = await ethers.getContractFactory("ArcadeDoge");
 
-    // Deposit 50 ArcadeDoge token to swap contract
-    await hardhatToken.transfer(hardhatSwap.address, 50);
-    expect(await hardhatToken.balanceOf(hardhatSwap.address)).to.equal(50);
-
-    await hardhatSwap.transferTo(addr1.address, 50);
-    expect(await hardhatToken.balanceOf(addr1.address)).to.equal(50);
-  });
-});
-
-describe('Deposit and Withdraw game point on Swap contract with incorrect sign', function() {
-  it('Should be failed', async function() {
-    const [owner, addr1, addr2] = await ethers.getSigners();
-
-    const Token = await ethers.getContractFactory('ArcadeDoge');
-    const hardhatToken = await Token.deploy('100000000000000000000000000000');
+    this.hardhatToken = await Token.deploy('10000000000000000000000');
 
     const Swap = await ethers.getContractFactory('ArcadeDogeSwap');
-    const hardhatSwap = await Swap.deploy();
-    
-    await hardhatSwap.setArcadeDogeTokenAddress(hardhatToken.address);
-    await hardhatSwap.setArcadeDogeBackendKey('ArcadeDogeBackend');
-    await hardhatSwap.setGameBackendKey(1, 'GameBackend');
-    await hardhatSwap.setGamePointPrice(1, 5);
 
-    // Deposit 50 ArcadeDoge token to swap contract
-    await hardhatToken.transfer(hardhatSwap.address, '1000000000000000000000');
-    expect(await hardhatToken.balanceOf(hardhatSwap.address)).to.equal('1000000000000000000000');
+    this.hardhatSwap = 
+      await Swap.deploy(tempAddress, tempAddress, tempAddress, tempAddress);
 
-    await hardhatToken.transfer(addr1.address, '10000000000000000000');
-    expect(await hardhatToken.balanceOf(addr1.address)).to.equal('10000000000000000000');
+    await this.hardhatSwap.setArcadeDogeTokenAddress(this.hardhatToken.address);
+    await this.hardhatToken.transfer(
+      this.hardhatSwap.address,
+      '1000000000000000000000'
+    );
 
-    await hardhatToken.connect(addr1).approve(hardhatSwap.address, '5000000000000000000');
-    await hardhatSwap.connect(addr1).deposit(1, '5000000000000000000');
+    expect(
+      await this.hardhatToken.balanceOf(this.hardhatSwap.address)
+    ).to.equal('1000000000000000000000');
 
-    expect(await hardhatToken.balanceOf(hardhatSwap.address)).to.equal('1005000000000000000000');
-
-    await hardhatSwap.connect(addr1).withdraw(1, 10000, 'Signature');
+    await this.hardhatSwap.setArcadeDogeTokenAddress(this.hardhatToken.address);
+    await this.hardhatSwap.setArcadeDogeBackendKey('ArcadeDogeBackend');
+    await this.hardhatSwap.setGameBackendKey(1, 'GameBackend');
+    await this.hardhatSwap.setGamePointPrice(1, 5);
   });
-});
 
-describe('Deposit and Withdraw game point on Swap contract with correct sign', function() {
-  it('Should be successed', async function() {
-    const [owner, addr1, addr2] = await ethers.getSigners();
+  it(
+    'Withdraw token from Swap contract should be successed.',
+    async function () {
+      const [owner, addr1] = await ethers.getSigners();
+      await this.hardhatSwap.transferTo(addr1.address, 50);
 
-    const Token = await ethers.getContractFactory('ArcadeDoge');
-    const hardhatToken = await Token.deploy('100000000000000000000000000000');
+      expect(await this.hardhatToken.balanceOf(addr1.address)).to.equal(50);
+    }
+  );
 
-    const Swap = await ethers.getContractFactory('ArcadeDogeSwap');
-    const hardhatSwap = await Swap.deploy();
-    
-    await hardhatSwap.setArcadeDogeTokenAddress(hardhatToken.address);
-    await hardhatSwap.setArcadeDogeBackendKey('ArcadeDogeBackend');
-    await hardhatSwap.setGameBackendKey(1, 'GameBackend');
-    await hardhatSwap.setGamePointPrice(1, 5);
+  describe('Deposit and Withdraw game point', async function() {
+    beforeEach(async function() {
+      const [owner, addr1] = await ethers.getSigners();
+  
+      await this.hardhatToken.transfer(addr1.address, '10000000000000000000');
+      expect(
+        await this.hardhatToken.balanceOf(addr1.address)
+      ).to.equal('10000000000000000000');
+    })
+    it(
+      'Deposit and Withdraw game point should be failed with incorrect sign',
+      async function() {
+        const [owner, addr1] = await ethers.getSigners();
 
-    // Deposit 50 ArcadeDoge token to swap contract
-    await hardhatToken.transfer(hardhatSwap.address, '1000000000000000000000');
-    expect(await hardhatToken.balanceOf(hardhatSwap.address)).to.equal('1000000000000000000000');
+        await this.hardhatToken.connect(addr1).approve(
+          this.hardhatSwap.address,
+          '5000000000000000000'
+        );
+        await this.hardhatSwap.connect(addr1).buyGamePoint(
+          1,
+          '5000000000000000000'
+        );
+  
+        expect(
+          await this.hardhatToken.balanceOf(this.hardhatSwap.address)
+        ).to.equal('1005000000000000000000');
+  
+        await expect(
+          this.hardhatSwap.connect(addr1).sellGamePoint(
+            1,
+            10000,
+            soliditySha3('signature')
+          )
+        ).to.be.revertedWith('Verification data is incorrect.');
+      }
+    );
+  
+    it(
+      'Deposit and Withdraw game point should be successed with correct sign',
+      async function() {
+        const [owner, addr1] = await ethers.getSigners();
 
-    await hardhatToken.transfer(addr1.address, '10000000000000000000');
-    expect(await hardhatToken.balanceOf(addr1.address)).to.equal('10000000000000000000');
+        await this.hardhatToken.connect(addr1).approve(
+          this.hardhatSwap.address,
+          '5000000000000000000'
+        );
+        await this.hardhatSwap.connect(addr1).buyGamePoint(
+          1,
+          '5000000000000000000'
+        );
+  
+        expect(
+          await this.hardhatToken.balanceOf(this.hardhatSwap.address)
+        ).to.equal('1005000000000000000000');
+  
+        await this.hardhatSwap.connect(addr1).sellGamePoint(
+          1,
+          10000,
+          generateSignValue(
+            1, 'GameBackend', 'ArcadeDogeBackend', addr1.address, 10000
+          )
+        )
+  
+        expect(
+          await this.hardhatToken.balanceOf(this.hardhatSwap.address)
+        ).to.equal('1000000000000000000000');
+  
+        expect(
+          await this.hardhatToken.balanceOf(addr1.address)
+        ).to.equal('10000000000000000000');
+      }
+    );
 
-    await hardhatToken.connect(addr1).approve(hardhatSwap.address, '5000000000000000000');
-    await hardhatSwap.connect(addr1).deposit(1, '5000000000000000000');
+    it(
+      'Deposit 2 times and Withdraw game point should be successed',
+      async function() {
+        const [owner, addr1] = await ethers.getSigners();
+        
+        await this.hardhatToken.connect(addr1).approve(
+          this.hardhatSwap.address,
+          '5000000000000000000'
+        );
+        await this.hardhatSwap.connect(addr1).buyGamePoint(
+          1,
+          '5000000000000000000'
+        );
 
-    expect(await hardhatToken.balanceOf(hardhatSwap.address)).to.equal('1005000000000000000000');
-
-    var sign = generateSignValue(1, 'GameBackend', 'ArcadeDogeBackend', addr1.address, 10000);
-
-    await hardhatSwap.connect(addr1).withdraw(1, 10000, sign);
-
-    expect(await hardhatToken.balanceOf(hardhatSwap.address)).to.equal('1000000000000000000000');
-
-    expect(await hardhatToken.balanceOf(addr1.address)).to.equal('10000000000000000000');
-  });
+        await this.hardhatToken.connect(addr1).approve(
+          this.hardhatSwap.address,
+          '5000000000000000000'
+        );
+        await this.hardhatSwap.connect(addr1).buyGamePoint(
+          1,
+          '5000000000000000000'
+        );
+  
+        expect(
+          await this.hardhatToken.balanceOf(this.hardhatSwap.address)
+        ).to.equal('1010000000000000000000');
+  
+        await this.hardhatSwap.connect(addr1).sellGamePoint(
+          1,
+          20000,
+          generateSignValue(
+            1, 'GameBackend', 'ArcadeDogeBackend', addr1.address, 20000
+          )
+        )
+  
+        expect(
+          await this.hardhatToken.balanceOf(this.hardhatSwap.address)
+        ).to.equal('1000000000000000000000');
+  
+        expect(
+          await this.hardhatToken.balanceOf(addr1.address)
+        ).to.equal('10000000000000000000');
+      }
+    );
+  })
 });
 
 function generateSignValue(id, gameBackendKey, backendKey, address, amount) {
-  var plainText = id + address.toLowerCase() + amount + gameBackendKey;
-  var gameSign = keccak256(plainText).toString('hex');
-  var backendSign = keccak256(Buffer.from(gameSign + backendKey)).toString('hex');
+  const gameSign = soliditySha3(
+    id,
+    address.toLowerCase(),
+    amount,
+    soliditySha3(gameBackendKey)
+  );
+  const backendSign = soliditySha3(
+    gameSign,
+    soliditySha3(backendKey)
+  );
   return backendSign;
 }

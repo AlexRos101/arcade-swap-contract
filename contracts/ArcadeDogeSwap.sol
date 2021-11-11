@@ -1,138 +1,194 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "./PancakeSwapInterface.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "./utils/ByteUtils.sol";
+import "./utils/AccountUtils.sol";
+import "./base/ArcadeDogeRate.sol";
+import "hardhat/console.sol";
 
 /**
- * @dev Swap ArcadeDoge(ERC20) token to individual game point.
+ * @notice Swap ArcadeDoge(ERC20) token to individual game point.
  * Serveral games are registered on this contract and each contract has their 
  * own keys for the verification.
  * And when the user calls the contract function to withdraw game point to 
  * ArcadeDoge token, these keys are used for the verification.
  */
-contract ArcadeDogeSwap is Ownable {
-    using SafeMath for uint;
+contract ArcadeDogeSwap is 
+    Ownable, ReentrancyGuard, ArcadeDogeRate 
+{
+    using SafeMath for uint256;
 
-    /** @dev event of deposit request
+    mapping(uint256 => uint256) public gamePointPrice;
+
+    bytes32 private _arcadedogeBackendKey;   
+    mapping(uint256 => bytes32) private _gameKeys;
+
+    mapping(address => mapping (uint256 => uint256)) private _totalDepositedArcadeDoge;
+    mapping(address => mapping (uint256 => uint256)) private _totalDepositedGamePoint;
+
+    /**
+     * @notice event of deposit request
      * @param id game id
      * @param tokenAmount deposited ArcadeDoge token amount
      * @param gamePointAmount deposited game point amount
+     * @param lastRate deposited rate * 10 ** 15
      */
-    event Deposit(uint256 id, uint256 tokenAmount, uint256 gamePointAmount);
+    event BuyGamePoint(
+        uint256 indexed id,
+        uint256 indexed tokenAmount,
+        uint256 gamePointAmount,
+        uint256 lastRate
+    );
 
-    /** @dev event of withdraw request
+    /** 
+     * @notice event of withdraw request
      * @param id game id
      * @param tokenAmount withdrawn ArcadeDoge token amount
      * @param gamePointAmount withdrawn game point amount
+     * @param rate withdrawn rate
      */
-    event Withdraw(uint256 id, uint256 tokenAmount, uint256 gamePointAmount);
+    event SellGamePoint(
+        uint256 indexed id,
+        uint256 tokenAmount,
+        uint256 gamePointAmount,
+        uint256 rate
+    );
 
-    string private _arcadedogeBackendKey;
-    mapping(uint256 => string) private _gameKeys;
-
-    address public arcadedogeTokenAddress;
-    address public pancakeswapFactoryAddress;
-    address public wbnbAddress;
-    address public busdAddress;
-
-    mapping(address => mapping(uint256 => uint256)) public lastRates;
-    mapping(uint256 => uint256) public gamePointPrice;
-
-    constructor() {
-
+    constructor(
+        address _arcadedogeTokenAddress,
+        address _factoryAddress,
+        address _wbnbAddress,
+        address _busdAddress
+    ) {
+        arcadedogeTokenAddress = _arcadedogeTokenAddress;
+        pancakeswapFactoryAddress = _factoryAddress;
+        wbnbAddress = _wbnbAddress;
+        busdAddress= _busdAddress;
     }
 
-    /** @dev set ArcadeDoge backend team's key
+    /** 
+     * @notice set ArcadeDoge backend team's key
      * @param key ArcadeDoge Backend key
      */
-    function setArcadeDogeBackendKey(string memory key) external onlyOwner {
-        require(keccak256(abi.encodePacked(key)) != keccak256(""), "key can't be none string");
-        _arcadedogeBackendKey = key;
+    function setArcadeDogeBackendKey(string memory key) 
+        external onlyOwner 
+    {
+        require(bytes(key).length > 0, "key can't be none string");
+        _arcadedogeBackendKey = keccak256(abi.encodePacked(key));
     }
 
-    /** @dev set individual game backend team's key
+    /** 
+     * @notice set individual game backend team's key
      * @param id game id
      * @param key game backend key
     */
-    function setGameBackendKey(uint256 id, string memory key) external onlyOwner {
+    function setGameBackendKey(uint256 id, string memory key) 
+        external onlyOwner 
+    {
         require(id != 0, "game id can't be zero");
-        require(keccak256(abi.encodePacked(key)) != keccak256(""), "key can't be none string");
-        _gameKeys[id] = key;
+        require(bytes(key).length > 0, "key can't be none string");
+        _gameKeys[id] = keccak256(abi.encodePacked(key));
     }
 
-    /** @dev set ArcadeDoge token's address
-     * @param tokenAddress ArcadeDoge token's address
-     */
-    function setArcadeDogeTokenAddress(address tokenAddress) external onlyOwner {
-        require(tokenAddress != address(0), "ArcadeDoge token's address can't be zero address.");
-        arcadedogeTokenAddress = tokenAddress;
-    }
-
-    /** @dev deposit ArcadeDoge token to game point
+    /** 
+     * @notice deposit ArcadeDoge token to game point
      * @param id game id
      * @param amount ArcadeDoge token amount 
      */
-    function deposit(uint256 id, uint256 amount) external {
+    function buyGamePoint(uint256 id, uint256 amount) external nonReentrant {
         require(id != 0, "game id can't be zero");
         require(amount != 0, "amount can't be zero");
-        require(keccak256(abi.encodePacked(_gameKeys[id])) != keccak256(""), "Not registered game key.");
+        require(_gameKeys[id] !=  0, "Not registered game key.");
         require(gamePointPrice[id] != 0, "Not registered game point price.");
 
-        bool successed = IERC20(arcadedogeTokenAddress).transferFrom(msg.sender, address(this), amount);
-        require(successed, "Transferring ArcadeDoge token to pool address was failed.");
+        bool successed = 
+            IERC20(arcadedogeTokenAddress)
+            .transferFrom(msg.sender, address(this), amount);
+        require(successed, "Failed to transfer Arcade token.");
 
-        uint256 rate = getRate().div(gamePointPrice[id]);
+        uint256 rate = getAracadeDogeRate().div(gamePointPrice[id]);
         uint256 gamePoint = amount.mul(rate).div(10 ** 15).div(10 ** 18);
 
-        lastRates[msg.sender][id] = rate;
+        addDepositInfo(msg.sender, id, amount, gamePoint);
 
-        emit Deposit(id, amount, gamePoint);
+        console.log("--------BuyGamePoint--------");
+        console.log(id);
+        console.log(amount);
+        console.log(gamePoint);
+        console.log(rate);
+        console.log("----------------------------");
+
+        emit BuyGamePoint(id, amount, gamePoint, rate);
     }
 
-    /** @dev withdraw game point to ArcadeDoge token
+    /** 
+     * @notice withdraw game point to ArcadeDoge token
      * @param id game id
      * @param amount amount to withdraw
      * @param verificationData data to verify the withdraw request
      */
-    function withdraw(uint256 id, uint256 amount, string memory verificationData) external {
-        string memory gameBackendVerification = 
-            bytes32ToString(keccak256(abi.encodePacked(
-                Strings.toString(id),
-                toString(msg.sender),
-                Strings.toString(amount),
+    function sellGamePoint(
+        uint256 id,
+        uint256 amount,
+        bytes32 verificationData
+    ) external nonReentrant {
+        bytes32 gameBackendVerification = 
+            keccak256(abi.encodePacked(
+                id,
+                msg.sender,
+                amount,
                 _gameKeys[id]
-            )));
-        string memory arcadedogeBackendVerification = 
-            bytes32ToString(keccak256(
-                abi.encodePacked(gameBackendVerification, _arcadedogeBackendKey)
             ));
+        bytes32 arcadedogeBackendVerification = 
+            keccak256(
+                abi.encodePacked(gameBackendVerification, _arcadedogeBackendKey)
+            );
         
         require(
-            keccak256(abi.encodePacked(verificationData)) == keccak256(abi.encodePacked(arcadedogeBackendVerification)),
+            verificationData == arcadedogeBackendVerification,
             "Verification data is incorrect."
         );
 
-        uint256 arcadedogeAmount = amount.mul(10 ** 15).mul(10 ** 18).div(lastRates[msg.sender][id]);
+        uint256 gamePointRate = getGamePointRate(msg.sender, id);
+        console.log(gamePointRate);
 
-        bool success = IERC20(arcadedogeTokenAddress).transfer(msg.sender, arcadedogeAmount);
-        require(success, "Transferring Arcadedoge token failed.");
+        uint256 arcadedogeAmount = 
+            amount.mul(gamePointRate);
 
-        emit Withdraw(id, arcadedogeAmount, amount);
+        console.log(arcadedogeAmount);
+
+        bool success = 
+            IERC20(arcadedogeTokenAddress)
+            .transfer(msg.sender, arcadedogeAmount);
+        require(success, "Failed to transfer $Arcade.");
+
+        console.log("--------SellGamePoint--------");
+        console.log(id);
+        console.log(arcadedogeAmount);
+        console.log(amount);
+        console.log(gamePointRate);
+        console.log("----------------------------");
+
+        emit SellGamePoint(id, arcadedogeAmount, amount, gamePointRate);
     }
 
-    /** @dev withdraw ArcadeDoge token
+    /** 
+     * @notice withdraw ArcadeDoge token
      * @param to "to" address of withdraw request
      * @param amount amount to withdraw
      */
     function transferTo(address to, uint256 amount) external onlyOwner {
-        require(to != address(0), "to address can't be zero address.");
+        require(to != address(0), "Transfer to zero address.");
         IERC20(arcadedogeTokenAddress).transfer(to, amount);
     }
 
-    /** @dev set price of individual game point in usd
+    /** 
+     * @notice set price of individual game point in usd
      * registered price = real price * 10**3
      * @param id game id
      * @param price game point price
@@ -142,122 +198,38 @@ contract ArcadeDogeSwap is Ownable {
         gamePointPrice[id] = price;
     }
 
-    /** @dev set PancakeSwap factory Address
-     * @param factoryAddress PancakeSwap pool factory address
+    /**
+     * @notice add total deposited ArcadeDoge token amount and 
+     * total deposited game point
+     * @param from wallet address which is going to deposit
+     * @param id game id
+     * @param tokenAmount deposited token amount
+     * @param gamePoint deposited game point
      */
-    function setPancakeSwapFactoryAddress(address factoryAddress) external onlyOwner {
-        require(factoryAddress != address(0), "PancakeSwap factory Address can't be zero address.");
-        pancakeswapFactoryAddress= factoryAddress;
-    }
+    function addDepositInfo(
+        address from,
+        uint256 id,
+        uint256 tokenAmount,
+        uint256 gamePoint
+    ) internal {
+        require(from != address(0), "Address can't be zero.");
 
-    /** @dev set WBNB address
-     * @param _wbnbAddress WBNB Address on BSC
-     */
-    function setWBNBAddress(address _wbnbAddress) external onlyOwner {
-        require(_wbnbAddress != address(0), "WBNB address can't be zero address.");
-        wbnbAddress = _wbnbAddress;
-    }
-
-    /** @dev set BUSD address
-     * @param _busdAddress WBNB Address on BSC
-     */
-    function setBUSDAddress(address _busdAddress) external onlyOwner {
-        require(_busdAddress != address(0), "BUSD address can't be zero address.");
-        busdAddress = _busdAddress;
+        _totalDepositedArcadeDoge[from][id] += tokenAmount;
+        _totalDepositedGamePoint[from][id] += gamePoint;
     }
 
     /**
-     * @dev Get liquidity info from pancakeswap.
-     * Get the balance of `token1` and `token2` from liquidity pool.
+     * @notice Get game point rate to ArcadeDoge token
+     * rate = real_rate * 10 ** 18
+     * @param from wallet address to withdraw game point
+     * @param id game id
+     * @return uint256 returns rate of game point to arcadedoge token
      */
-    function getLiquidityInfo(
-        address token1, 
-        address token2
-    ) private view returns (uint256, uint256){
-        address pairAddress = IUniswapV2Factory(pancakeswapFactoryAddress).getPair(token1, token2);
-        
-        IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
-        (uint Res0, uint Res1,) = pair.getReserves();
-        
-        address pairToken0 = pair.token0();
-        if (pairToken0 == token1) {
-            return (Res0, Res1);
-        } else {
-            return (Res1, Res0);
-        }
-    }
-
-    /**
-     * @dev Get BNB price in USD
-     */
-    function getBNBPrice() public view returns (uint256) {
-        (uint256 bnbReserve, uint256 busdReserve) = getLiquidityInfo(wbnbAddress, busdAddress);
-        return busdReserve.mul(10 ** 18).div(bnbReserve);
-    }
-
-    /**
-     * @dev Get ArcadeDoge price in USD
-     */
-    function getRate() public view returns (uint256) {
-        // (uint256 arcadedogeReserve, uint256 bnbReserve) = getLiquidityInfo(arcadedogeTokenAddress, wbnbAddress);
-        // uint256 bnbPrice = getBNBPrice();
-        // return bnbReserve.mul(bnbPrice).div(arcadedogeReserve);
-        return 10 * 10 ** 18;
-    }
-
-    /** @dev convert address value to string value
-     * @param account address value to convert
-     * @return string converted string value
-     */
-    function toString(address account) private pure returns(string memory) {
-        return toString(abi.encodePacked(account));
-    }
-
-    /** @dev convert bytes value to string value
-     * @param data bytes value to convert
-     * @return string converted string value
-     */
-    function toString(bytes memory data) private pure returns(string memory) {
-        bytes memory alphabet = "0123456789abcdef";
-
-        bytes memory str = new bytes(2 + data.length * 2);
-        str[0] = "0";
-        str[1] = "x";
-        for (uint i = 0; i < data.length; i++) {
-            str[2+i*2] = alphabet[uint(uint8(data[i] >> 4))];
-            str[3+i*2] = alphabet[uint(uint8(data[i] & 0x0f))];
-        }
-        return string(str);
-    }
-
-    /** @dev convert byte32 to hex string
-     * @param _bytes32 bytes32 data
-     * @return string converted hex string
-     */
-    function bytes32ToString(bytes32 _bytes32) private pure returns (string memory) {
-        uint8 i = 0;
-        bytes memory bytesArray = new bytes(64);
-        for (i = 0; i < bytesArray.length; i++) {
-
-            uint8 _f = uint8(_bytes32[i/2] & 0x0f);
-            uint8 _l = uint8(_bytes32[i/2] >> 4);
-
-            bytesArray[i] = toByte(_l);
-            i = i + 1;
-            bytesArray[i] = toByte(_f);
-        }
-        return string(bytesArray);
-    }
-
-    /** @dev convert uint8 value to byte value
-     * @param _uint8 uint8 value
-     * @return byte converted byte value
-     */
-    function toByte(uint8 _uint8) private pure returns (bytes1) {
-        if(_uint8 < 10) {
-            return bytes1(_uint8 + 48);   
-        } else {
-            return bytes1(_uint8 + 87);
-        }
+    function getGamePointRate(address from, uint256 id) 
+        public view returns (uint256) 
+    {
+        return 
+            _totalDepositedArcadeDoge[from][id]
+            .div(_totalDepositedGamePoint[from][id]);
     }
 }
