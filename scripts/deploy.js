@@ -41,18 +41,25 @@ async function main() {
   if (network.name === "testnet" || network.name === "mainnet") {
     console.log('-------Deploying-----------')
     const Swap = await ethers.getContractFactory("ArcadeDogeSwap");    
-    const hardhatSwap = await Swap.deploy(
+    const swapImplementation = await Swap.deploy(
       addresses[network.name].arcadedoge,
       addresses[network.name].factory,
       addresses[network.name].wbnb,
       addresses[network.name].busd,
     )
-    console.log("Deployed Address: " + hardhatSwap.address);
+    await swapImplementation.deployed();
+    console.log("Deployed Address: " + swapImplementation.address);
 
     console.log('-------Verifying-----------');
     try {
       await run("verify:verify", {
-        address: hardhatSwap.address,
+        address: swapImplementation.address,
+        constructorArguments: [
+          addresses[network.name].arcadedoge,
+          addresses[network.name].factory,
+          addresses[network.name].wbnb,
+          addresses[network.name].busd
+        ]
       });
     } catch (error) {
       if (error instanceof NomicLabsHardhatPluginError) {

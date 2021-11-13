@@ -95,11 +95,10 @@ contract ArcadeDogeRate is Ownable {
      * price = real_price * 10 ** 18
      * @return uint256 returns ArcadeDoge token price in USD
      */
-    function getAracadeDogeRate() public view returns (uint256) {
-        // (uint256 arcadedogeReserve, uint256 bnbReserve) = 
-        //     _getLiquidityInfo(arcadedogeTokenAddress, wbnbAddress);
-        // uint256 bnbPrice = getBNBPrice();
-        // return bnbReserve.mul(bnbPrice).div(arcadedogeReserve);
-        return 10 * 10 ** 18;
+    function getArcadeDogeRate() public view returns (uint256) {
+        (uint256 arcadedogeReserve, uint256 bnbReserve) = 
+            _getLiquidityInfo(arcadedogeTokenAddress, wbnbAddress);
+        uint256 bnbPrice = getBNBPrice();
+        return bnbReserve.mul(bnbPrice).div(arcadedogeReserve);
     }
 }

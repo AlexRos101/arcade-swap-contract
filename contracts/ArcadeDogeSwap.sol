@@ -28,8 +28,10 @@ contract ArcadeDogeSwap is
     bytes32 private _arcadedogeBackendKey;   
     mapping(uint256 => bytes32) private _gameKeys;
 
-    mapping(address => mapping (uint256 => uint256)) private _totalDepositedArcadeDoge;
-    mapping(address => mapping (uint256 => uint256)) private _totalDepositedGamePoint;
+    mapping(address => mapping (uint256 => uint256))
+        private _totalDepositedArcadeDoge;
+    mapping(address => mapping (uint256 => uint256))
+        private _totalDepositedGamePoint;
 
     /**
      * @notice event of deposit request
@@ -41,7 +43,7 @@ contract ArcadeDogeSwap is
     event BuyGamePoint(
         uint256 indexed id,
         uint256 indexed tokenAmount,
-        uint256 gamePointAmount,
+        uint256 indexed gamePointAmount,
         uint256 lastRate
     );
 
@@ -54,8 +56,8 @@ contract ArcadeDogeSwap is
      */
     event SellGamePoint(
         uint256 indexed id,
-        uint256 tokenAmount,
-        uint256 gamePointAmount,
+        uint256 indexed tokenAmount,
+        uint256 indexed gamePointAmount,
         uint256 rate
     );
 
@@ -111,10 +113,10 @@ contract ArcadeDogeSwap is
             .transferFrom(msg.sender, address(this), amount);
         require(successed, "Failed to transfer Arcade token.");
 
-        uint256 rate = getAracadeDogeRate().div(gamePointPrice[id]);
+        uint256 rate = getArcadeDogeRate().div(gamePointPrice[id]);
         uint256 gamePoint = amount.mul(rate).div(10 ** 15).div(10 ** 18);
 
-        addDepositInfo(msg.sender, id, amount, gamePoint);
+        _addDepositInfo(msg.sender, id, amount, gamePoint);
 
         console.log("--------BuyGamePoint--------");
         console.log(id);
@@ -155,12 +157,9 @@ contract ArcadeDogeSwap is
         );
 
         uint256 gamePointRate = getGamePointRate(msg.sender, id);
-        console.log(gamePointRate);
 
         uint256 arcadedogeAmount = 
             amount.mul(gamePointRate);
-
-        console.log(arcadedogeAmount);
 
         bool success = 
             IERC20(arcadedogeTokenAddress)
@@ -206,12 +205,12 @@ contract ArcadeDogeSwap is
      * @param tokenAmount deposited token amount
      * @param gamePoint deposited game point
      */
-    function addDepositInfo(
+    function _addDepositInfo(
         address from,
         uint256 id,
         uint256 tokenAmount,
         uint256 gamePoint
-    ) internal {
+    ) private {
         require(from != address(0), "Address can't be zero.");
 
         _totalDepositedArcadeDoge[from][id] += tokenAmount;
@@ -228,6 +227,10 @@ contract ArcadeDogeSwap is
     function getGamePointRate(address from, uint256 id) 
         public view returns (uint256) 
     {
+        if (_totalDepositedGamePoint[from][id] == 0) {
+            return 0;
+        }
+        
         return 
             _totalDepositedArcadeDoge[from][id]
             .div(_totalDepositedGamePoint[from][id]);
