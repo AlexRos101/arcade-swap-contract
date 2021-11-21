@@ -114,9 +114,10 @@ contract ArcadeDogeSwap is
         require(successed, "Failed to transfer Arcade token.");
 
         uint256 rate = getArcadeDogeRate().div(gamePointPrice[id]);
-        uint256 gamePoint = amount.mul(rate).div(10 ** 15).div(10 ** 18);
+        uint256 internalGamePoint = amount.mul(rate).div(10 ** 15);
+        uint256 gamePoint = internalGamePoint.div(10 ** 18);
 
-        _addDepositInfo(msg.sender, id, amount, gamePoint);
+        _addDepositInfo(msg.sender, id, amount, internalGamePoint);
 
         console.log("--------BuyGamePoint--------");
         console.log(id);
@@ -228,11 +229,12 @@ contract ArcadeDogeSwap is
         public view returns (uint256) 
     {
         if (_totalDepositedGamePoint[from][id] == 0) {
-            return 0;
+            return gamePointPrice[id].mul(10 ** 33).div(getArcadeDogeRate());
         }
         
         return 
             _totalDepositedArcadeDoge[from][id]
+            .mul(10 ** 18)
             .div(_totalDepositedGamePoint[from][id]);
     }
 }
