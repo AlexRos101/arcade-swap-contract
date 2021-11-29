@@ -1,12 +1,12 @@
 const { expect } = require("chai");
 
-describe("ArcadeDoge Token contract", function () {
+describe("Arcade Token contract", function () {
   it(
     "Deployment should assign the total supply of tokens to the owner",
     async function () {
       const [owner] = await ethers.getSigners();
 
-      const Token = await ethers.getContractFactory("ArcadeDoge");
+      const Token = await ethers.getContractFactory("Arcade");
 
       const hardhatToken = await Token.deploy('1000000000000000000000');
 
@@ -20,7 +20,7 @@ describe("Transactions", function() {
     it("Should transfer tokens between accounts", async function() {
       const [owner, addr1, addr2] = await ethers.getSigners();
   
-      const Token = await ethers.getContractFactory("ArcadeDoge");
+      const Token = await ethers.getContractFactory("Arcade");
   
       const hardhatToken = await Token.deploy('1000000000000000000000');
   

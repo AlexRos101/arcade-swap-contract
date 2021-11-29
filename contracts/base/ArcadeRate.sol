@@ -5,11 +5,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interface/pcs/PancakeSwapInterface.sol";
 
-contract ArcadeDogeRate is Ownable {
+contract ArcadeRate is Ownable {
     using SafeMath for uint256;
 
     address public pancakeswapFactoryAddress;
-    address public arcadedogeTokenAddress;
+    address public arcadeTokenAddress;
     address public wbnbAddress;
     address public busdAddress;
 
@@ -25,14 +25,14 @@ contract ArcadeDogeRate is Ownable {
     }
 
     /** 
-     * @notice set ArcadeDoge token's address
-     * @param tokenAddress ArcadeDoge token's address
+     * @notice set Arcade token's address
+     * @param tokenAddress Arcade token's address
      */
-    function setArcadeDogeTokenAddress(address tokenAddress) 
+    function setArcadeTokenAddress(address tokenAddress) 
         external onlyOwner 
     {
         require(tokenAddress != address(0), "$Arcade can't be zero address.");
-        arcadedogeTokenAddress = tokenAddress;
+        arcadeTokenAddress = tokenAddress;
     }
 
     /** 
@@ -91,14 +91,14 @@ contract ArcadeDogeRate is Ownable {
     }
 
     /**
-     * @notice Get ArcadeDoge price in USD
+     * @notice Get Arcade price in USD
      * price = real_price * 10 ** 18
-     * @return uint256 returns ArcadeDoge token price in USD
+     * @return uint256 returns Arcade token price in USD
      */
-    function getArcadeDogeRate() public view returns (uint256) {
-        (uint256 arcadedogeReserve, uint256 bnbReserve) = 
-            _getLiquidityInfo(arcadedogeTokenAddress, wbnbAddress);
+    function getArcadeRate() public view returns (uint256) {
+        (uint256 arcadeReserve, uint256 bnbReserve) = 
+            _getLiquidityInfo(arcadeTokenAddress, wbnbAddress);
         uint256 bnbPrice = getBNBPrice();
-        return bnbReserve.mul(bnbPrice).div(arcadedogeReserve);
+        return bnbReserve.mul(bnbPrice).div(arcadeReserve);
     }
 }

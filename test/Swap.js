@@ -7,32 +7,32 @@ describe('Swap setting without owner', function () {
 
     const tempAddress = addr1.address;
 
-    const Swap = await ethers.getContractFactory('ArcadeDogeSwap');
+    const Swap = await ethers.getContractFactory('ArcadeSwap');
 
     const hardhatSwap = 
       await Swap.deploy(tempAddress, tempAddress, tempAddress, tempAddress);
 
-    await expect(hardhatSwap.connect(addr1).setArcadeDogeBackendKey('ABC'))
+    await expect(hardhatSwap.connect(addr1).setArcadeBackendKey('ABC'))
       .to.be.revertedWith("Ownable: caller is not the owner");
   });
 });
 
-describe('Deposit and Withdraw ArcadeDoge token on Swap contract', function () {
+describe('Deposit and Withdraw Arcade token on Swap contract', function () {
   beforeEach(async function () {
     const [owner, addr1] = await ethers.getSigners();
 
     const tempAddress = addr1.address;
 
-    const Token = await ethers.getContractFactory("ArcadeDoge");
+    const Token = await ethers.getContractFactory("Arcade");
 
     this.hardhatToken = await Token.deploy('10000000000000000000000');
 
-    const Swap = await ethers.getContractFactory('ArcadeDogeSwap');
+    const Swap = await ethers.getContractFactory('ArcadeSwap');
 
     this.hardhatSwap = 
       await Swap.deploy(tempAddress, tempAddress, tempAddress, tempAddress);
 
-    await this.hardhatSwap.setArcadeDogeTokenAddress(this.hardhatToken.address);
+    await this.hardhatSwap.setArcadeTokenAddress(this.hardhatToken.address);
     await this.hardhatToken.transfer(
       this.hardhatSwap.address,
       '1000000000000000000000'
@@ -42,8 +42,8 @@ describe('Deposit and Withdraw ArcadeDoge token on Swap contract', function () {
       await this.hardhatToken.balanceOf(this.hardhatSwap.address)
     ).to.equal('1000000000000000000000');
 
-    await this.hardhatSwap.setArcadeDogeTokenAddress(this.hardhatToken.address);
-    await this.hardhatSwap.setArcadeDogeBackendKey('ArcadeDogeBackend');
+    await this.hardhatSwap.setArcadeTokenAddress(this.hardhatToken.address);
+    await this.hardhatSwap.setArcadeBackendKey('ArcadeDogeBackend');
     await this.hardhatSwap.setGameBackendKey(1, 'GameBackend');
     await this.hardhatSwap.setGamePointPrice(1, 5);
   });

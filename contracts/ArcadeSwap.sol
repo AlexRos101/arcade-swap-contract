@@ -8,35 +8,35 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./utils/ByteUtils.sol";
 import "./utils/AccountUtils.sol";
-import "./base/ArcadeDogeRate.sol";
+import "./base/ArcadeRate.sol";
 import "hardhat/console.sol";
 
 /**
- * @notice Swap ArcadeDoge(ERC20) token to individual game point.
+ * @notice Swap Arcade(ERC20) token to individual game point.
  * Serveral games are registered on this contract and each contract has their 
  * own keys for the verification.
  * And when the user calls the contract function to withdraw game point to 
- * ArcadeDoge token, these keys are used for the verification.
+ * Arcade token, these keys are used for the verification.
  */
-contract ArcadeDogeSwap is 
-    Ownable, ReentrancyGuard, ArcadeDogeRate 
+contract ArcadeSwap is 
+    Ownable, ReentrancyGuard, ArcadeRate 
 {
     using SafeMath for uint256;
 
     mapping(uint256 => uint256) public gamePointPrice;
 
-    bytes32 private _arcadedogeBackendKey;   
+    bytes32 private _arcadeBackendKey;   
     mapping(uint256 => bytes32) private _gameKeys;
 
     mapping(address => mapping (uint256 => uint256))
-        private _totalDepositedArcadeDoge;
+        private _totalDepositedArcade;
     mapping(address => mapping (uint256 => uint256))
         private _totalDepositedGamePoint;
 
     /**
      * @notice event of deposit request
      * @param id game id
-     * @param tokenAmount deposited ArcadeDoge token amount
+     * @param tokenAmount deposited Arcade token amount
      * @param gamePointAmount deposited game point amount
      * @param lastRate deposited rate * 10 ** 15
      */
@@ -50,7 +50,7 @@ contract ArcadeDogeSwap is
     /** 
      * @notice event of withdraw request
      * @param id game id
-     * @param tokenAmount withdrawn ArcadeDoge token amount
+     * @param tokenAmount withdrawn Arcade token amount
      * @param gamePointAmount withdrawn game point amount
      * @param rate withdrawn rate
      */
@@ -62,26 +62,26 @@ contract ArcadeDogeSwap is
     );
 
     constructor(
-        address _arcadedogeTokenAddress,
+        address _arcadeTokenAddress,
         address _factoryAddress,
         address _wbnbAddress,
         address _busdAddress
     ) {
-        arcadedogeTokenAddress = _arcadedogeTokenAddress;
+        arcadeTokenAddress = _arcadeTokenAddress;
         pancakeswapFactoryAddress = _factoryAddress;
         wbnbAddress = _wbnbAddress;
         busdAddress= _busdAddress;
     }
 
     /** 
-     * @notice set ArcadeDoge backend team's key
-     * @param key ArcadeDoge Backend key
+     * @notice set Arcade backend team's key
+     * @param key Arcade Backend key
      */
-    function setArcadeDogeBackendKey(string memory key) 
+    function setArcadeBackendKey(string memory key) 
         external onlyOwner 
     {
         require(bytes(key).length > 0, "key can't be none string");
-        _arcadedogeBackendKey = keccak256(abi.encodePacked(key));
+        _arcadeBackendKey = keccak256(abi.encodePacked(key));
     }
 
     /** 
@@ -98,9 +98,9 @@ contract ArcadeDogeSwap is
     }
 
     /** 
-     * @notice deposit ArcadeDoge token to game point
+     * @notice deposit Arcade token to game point
      * @param id game id
-     * @param amount ArcadeDoge token amount 
+     * @param amount Arcade token amount 
      */
     function buyGamePoint(uint256 id, uint256 amount) external nonReentrant {
         require(id != 0, "game id can't be zero");
@@ -109,11 +109,11 @@ contract ArcadeDogeSwap is
         require(gamePointPrice[id] != 0, "Not registered game point price.");
 
         bool successed = 
-            IERC20(arcadedogeTokenAddress)
+            IERC20(arcadeTokenAddress)
             .transferFrom(msg.sender, address(this), amount);
         require(successed, "Failed to transfer Arcade token.");
 
-        uint256 rate = getArcadeDogeRate().div(gamePointPrice[id]);
+        uint256 rate = getArcadeRate().div(gamePointPrice[id]);
         uint256 internalGamePoint = amount.mul(rate).div(10 ** 15);
         uint256 gamePoint = internalGamePoint.div(10 ** 18);
 
@@ -130,7 +130,7 @@ contract ArcadeDogeSwap is
     }
 
     /** 
-     * @notice withdraw game point to ArcadeDoge token
+     * @notice withdraw game point to Arcade token
      * @param id game id
      * @param amount amount to withdraw
      * @param verificationData data to verify the withdraw request
@@ -147,44 +147,44 @@ contract ArcadeDogeSwap is
                 amount,
                 _gameKeys[id]
             ));
-        bytes32 arcadedogeBackendVerification = 
+        bytes32 arcadeBackendVerification = 
             keccak256(
-                abi.encodePacked(gameBackendVerification, _arcadedogeBackendKey)
+                abi.encodePacked(gameBackendVerification, _arcadeBackendKey)
             );
         
         require(
-            verificationData == arcadedogeBackendVerification,
+            verificationData == arcadeBackendVerification,
             "Verification data is incorrect."
         );
 
         uint256 gamePointRate = getGamePointRate(msg.sender, id);
 
-        uint256 arcadedogeAmount = 
+        uint256 arcadeAmount = 
             amount.mul(gamePointRate);
 
         bool success = 
-            IERC20(arcadedogeTokenAddress)
-            .transfer(msg.sender, arcadedogeAmount);
+            IERC20(arcadeTokenAddress)
+            .transfer(msg.sender, arcadeAmount);
         require(success, "Failed to transfer $Arcade.");
 
         console.log("--------SellGamePoint--------");
         console.log(id);
-        console.log(arcadedogeAmount);
+        console.log(arcadeAmount);
         console.log(amount);
         console.log(gamePointRate);
         console.log("----------------------------");
 
-        emit SellGamePoint(id, arcadedogeAmount, amount, gamePointRate);
+        emit SellGamePoint(id, arcadeAmount, amount, gamePointRate);
     }
 
     /** 
-     * @notice withdraw ArcadeDoge token
+     * @notice withdraw Arcade token
      * @param to "to" address of withdraw request
      * @param amount amount to withdraw
      */
     function transferTo(address to, uint256 amount) external onlyOwner {
         require(to != address(0), "Transfer to zero address.");
-        IERC20(arcadedogeTokenAddress).transfer(to, amount);
+        IERC20(arcadeTokenAddress).transfer(to, amount);
     }
 
     /** 
@@ -199,7 +199,7 @@ contract ArcadeDogeSwap is
     }
 
     /**
-     * @notice add total deposited ArcadeDoge token amount and 
+     * @notice add total deposited Arcade token amount and 
      * total deposited game point
      * @param from wallet address which is going to deposit
      * @param id game id
@@ -214,26 +214,26 @@ contract ArcadeDogeSwap is
     ) private {
         require(from != address(0), "Address can't be zero.");
 
-        _totalDepositedArcadeDoge[from][id] += tokenAmount;
+        _totalDepositedArcade[from][id] += tokenAmount;
         _totalDepositedGamePoint[from][id] += gamePoint;
     }
 
     /**
-     * @notice Get game point rate to ArcadeDoge token
+     * @notice Get game point rate to Arcade token
      * rate = real_rate * 10 ** 18
      * @param from wallet address to withdraw game point
      * @param id game id
-     * @return uint256 returns rate of game point to arcadedoge token
+     * @return uint256 returns rate of game point to arcade token
      */
     function getGamePointRate(address from, uint256 id) 
         public view returns (uint256) 
     {
         if (_totalDepositedGamePoint[from][id] == 0) {
-            return gamePointPrice[id].mul(10 ** 33).div(getArcadeDogeRate());
+            return gamePointPrice[id].mul(10 ** 33).div(getArcadeRate());
         }
         
         return 
-            _totalDepositedArcadeDoge[from][id]
+            _totalDepositedArcade[from][id]
             .mul(10 ** 18)
             .div(_totalDepositedGamePoint[from][id]);
     }
