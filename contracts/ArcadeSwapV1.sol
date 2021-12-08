@@ -2,8 +2,9 @@
 pragma solidity ^0.8.4;
 
 import "./abstracts/AbstractArcadeUpgradeable.sol";
-import "./BEP20Price.sol";
+import "./interface/IBEP20Price.sol";
 import "hardhat/console.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
 /**
  * @notice Swap Arcade(ERC20) token to individual game point.
@@ -12,8 +13,11 @@ import "hardhat/console.sol";
  * And when the user calls the contract function to withdraw game point to 
  * Arcade token, these keys are used for the verification.
  */
-contract ArcadeSwapV1 is AbstractArcadeUpgradeable, BEP20Price {
+contract ArcadeSwapV1 is AbstractArcadeUpgradeable {
     using SafeMathUpgradeable for uint256;
+
+    address public arcadeToken;
+    IBEP20Price public bep20Price;
 
     /**
      * game id => price(in 3 digits for 100%)
@@ -62,18 +66,16 @@ contract ArcadeSwapV1 is AbstractArcadeUpgradeable, BEP20Price {
     );
 
     function __ArcadeSwap_init(
-        address _arcadeTokenAddress,
-        address _factoryAddress,
-        address _wbnbAddress,
-        address _busdAddress
+        address _arcadeToken,
+        IBEP20Price _bep20Price
     ) public initializer {
         AbstractArcadeUpgradeable.initialize();
-        super.initialize(
-            _factoryAddress,
-            _arcadeTokenAddress,
-            _wbnbAddress,
-            _busdAddress
-        );
+        arcadeToken = _arcadeToken;
+        bep20Price = _bep20Price;
+    }
+
+    function setBep20Price(IBEP20Price _bep20Price) external onlyOwner {
+        bep20Price = _bep20Price;
     }
 
     /** 
@@ -112,11 +114,13 @@ contract ArcadeSwapV1 is AbstractArcadeUpgradeable, BEP20Price {
         require(gamePointPrice[id] != 0, "Not registered game point price.");
 
         bool successed = 
-            IERC20Upgradeable(tokenAddress)
+            IERC20Upgradeable(arcadeToken)
             .transferFrom(msg.sender, address(this), amount);
         require(successed, "Failed to transfer Arcade token.");
 
-        uint256 rate = getTokenPrice().div(gamePointPrice[id]);
+        uint256 rate = bep20Price.getTokenPrice(
+            arcadeToken, 18
+        ).div(gamePointPrice[id]);
         uint256 internalGamePoint = amount.mul(rate).div(10 ** 15);
         uint256 gamePoint = internalGamePoint.div(10 ** 18);
 
@@ -166,7 +170,7 @@ contract ArcadeSwapV1 is AbstractArcadeUpgradeable, BEP20Price {
             amount.mul(gamePointRate);
 
         bool success = 
-            IERC20Upgradeable(tokenAddress)
+            IERC20Upgradeable(arcadeToken)
             .transfer(msg.sender, arcadeAmount);
         require(success, "Failed to transfer $Arcade.");
 
@@ -188,7 +192,7 @@ contract ArcadeSwapV1 is AbstractArcadeUpgradeable, BEP20Price {
     function transferTo(address to, uint256 amount) external onlyOwner {
         require(to != address(0), "Transfer to zero address.");
         bool success = 
-            IERC20Upgradeable(tokenAddress)
+            IERC20Upgradeable(arcadeToken)
             .transfer(to, amount);
         require(success, "Failed to transfer $Arcade.");
     }
@@ -235,7 +239,9 @@ contract ArcadeSwapV1 is AbstractArcadeUpgradeable, BEP20Price {
         public view returns (uint256) 
     {
         if (_totalDepositedGamePoint[from][id] == 0) {
-            return gamePointPrice[id].mul(10 ** 33).div(getTokenPrice());
+            return gamePointPrice[id].mul(10 ** 33).div(
+                bep20Price.getTokenPrice(arcadeToken, 18)
+            );
         }
         
         return 

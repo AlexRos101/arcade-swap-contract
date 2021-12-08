@@ -1,34 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./interface/PancakeSwapInterface.sol";
+import "./interface/IBEP20Price.sol";
 
-contract BEP20Price is OwnableUpgradeable {
-    using SafeMathUpgradeable for uint256;
+contract BEP20Price is Ownable, IBEP20Price {
+    using SafeMath for uint256;
 
     address public factoryAddress;
-    address public tokenAddress;
     address public wbnbAddress;
     address public busdAddress;
 
     /**
      * @notice Initialize variable members
      * @param _factoryAddress PancakeSwap pool factory address
-     * @param _tokenAddress ERC20 token address
      * @param _wbnbAddress WBNB token address
      * @param _busdAddress BUSD token address
      * @dev Callable by owner
      */
     function initialize(
         address _factoryAddress,
-        address _tokenAddress,
         address _wbnbAddress,
         address _busdAddress
     ) public onlyOwner {
         factoryAddress = _factoryAddress;
-        tokenAddress = _tokenAddress;
         wbnbAddress = _wbnbAddress;
         busdAddress = _busdAddress;
     }
@@ -59,26 +56,35 @@ contract BEP20Price is OwnableUpgradeable {
         }
     }
 
-    /**
-     * @notice Get BNB price in USD
-     * price = real_price * 10 ** 18
-     * @return uint256 returns BNB price in usd
-     */
-    function getBNBPrice() public view returns (uint256) {
+    function _getBNBPrice() internal view returns (uint256) {
         (uint256 bnbReserve, uint256 busdReserve) = 
             _getLiquidityInfo(wbnbAddress, busdAddress);
         return busdReserve.mul(10 ** 18).div(bnbReserve);
     }
 
     /**
-     * @notice Get ERC20 token price in USD
+     * @notice Get BNB price in USD
      * price = real_price * 10 ** 18
+     * @return uint256 returns BNB price in usd
+     */
+    function getBNBPrice() external override view returns (uint256) {
+        return _getBNBPrice();
+    }
+
+    /**
+     * @notice Get BEP20 token price in USD
+     * price = real_price * 10 ** 18
+     * @param _token BEP20 token address
+     * @param _digits BEP20 token digits
      * @return uint256 returns Arcade token price in USD
      */
-    function getTokenPrice() public view returns (uint256) {
+    function getTokenPrice(
+        address _token,
+        uint256 _digits
+    ) external override view returns (uint256) {
         (uint256 tokenReserve, uint256 bnbReserve) = 
-            _getLiquidityInfo(tokenAddress, wbnbAddress);
-        uint256 bnbPrice = getBNBPrice();
+            _getLiquidityInfo(_token, wbnbAddress);
+        uint256 bnbPrice = _getBNBPrice();
         return bnbReserve.mul(bnbPrice).div(tokenReserve);
     }
 }

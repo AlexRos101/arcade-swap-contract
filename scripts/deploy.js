@@ -39,14 +39,22 @@ async function main() {
 
   if (network.name === "testnet" || network.name === "mainnet") {
     console.log("-------Deploying-----------")
+    const BEP20Price = await ethers.getContractFactory("BEP20Price");
+    const bep20Price = await BEP20Price.deploy();
+    await bep20Price.deployed();
+    bep20Price.initialize(
+      addresses[network.name].factory,
+      addresses[network.name].wbnb,
+      addresses[network.name].busd,
+    );
+    console.log("Deployed BEP20Price Address: " + bep20Price.address);
+
     const Swap = await ethers.getContractFactory("ArcadeSwapV1");
     const swapUpgrades = await upgrades.deployProxy(
       Swap,
       [
         addresses[network.name].arcade,
-        addresses[network.name].factory,
-        addresses[network.name].wbnb,
-        addresses[network.name].busd,
+        bep20Price.address
       ],
       {
         kind: "uups",
@@ -55,12 +63,27 @@ async function main() {
     );
     await swapUpgrades.deployed();
     
-    console.log("Deployed Address: " + swapUpgrades.address);
+    console.log("Deployed Swap Address: " + swapUpgrades.address);
 
     console.log("-------Verifying-----------");
     try {
+      // verify
+      await run("verify:verify", {
+        address: bep20Price.address
+      });
+
+    } catch (error) {
+      if (error instanceof NomicLabsHardhatPluginError) {
+        console.log("Contract source code already verified");
+      } else {
+        console.error(error);
+      }
+    }
+
+    let swapImpl
+    try {
       // Verify
-      const swapImpl = await upgrades.erc1967.getImplementationAddress(
+      swapImpl = await upgrades.erc1967.getImplementationAddress(
         swapUpgrades.address
       );
       console.log("Verifying swap contract address: ", swapImpl);
@@ -69,7 +92,6 @@ async function main() {
       });
       
     } catch (error) {
-      console.log(error);
       if (error instanceof NomicLabsHardhatPluginError) {
         console.log("Contract source code already verified");
       } else {
@@ -77,6 +99,22 @@ async function main() {
       }
     }
     console.log("-------Verified-----------");
+
+    const deployerLog = { Label: "Deploying Address", Info: deployer.address };
+    const bep20PriceLog = {
+      Label: "Deployed BEP20Price Address",
+      Info: bep20Price.address,
+    };
+    const proxyLog = {
+      Label: "Deployed Swap Proxy Address",
+      Info: swapUpgrades.address,
+    };
+    const implementationLog = {
+      Label: "Deployed Implementation Address",
+      Info: swapImpl,
+    };
+
+    console.table([deployerLog, bep20PriceLog, proxyLog, implementationLog]);
   }
 }
 
