@@ -10,13 +10,11 @@ describe("Swap", function () {
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
 
-    const tempAddress = addr1.address;
-    
     const Token = await ethers.getContractFactory("Arcade");
     arcade = await Token.deploy("10000000000000000000000");
     await arcade.deployed();
 
-    const BEP20Price = await ethers.getContractFactory("BEP20Price");
+    const BEP20Price = await ethers.getContractFactory("MockBEP20Price");
     bep20Price = await BEP20Price.deploy();
     await bep20Price.deployed();
 
