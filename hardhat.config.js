@@ -2,6 +2,7 @@ require("dotenv").config();
 
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
+require("@openzeppelin/hardhat-upgrades");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
 
@@ -41,5 +42,12 @@ module.exports = {
   },
   etherscan: {
     apiKey: process.env.BSCSCAN_API_KEY,
+  },
+  abiExporter: {
+    path: "./data/abi",
+    clear: true,
+    flat: true,
+    only: [],
+    spacing: 2,
   },
 };
