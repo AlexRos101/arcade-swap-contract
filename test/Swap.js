@@ -5,7 +5,7 @@ const { soliditySha3 } = require("web3-utils");
 describe("Swap", function () {
 
   let owner, addr1;
-  let swap, arcade;
+  let bep20Price, swap, arcade;
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
@@ -14,12 +14,17 @@ describe("Swap", function () {
     
     const Token = await ethers.getContractFactory("Arcade");
     arcade = await Token.deploy("10000000000000000000000");
+    await arcade.deployed();
+
+    const BEP20Price = await ethers.getContractFactory("BEP20Price");
+    bep20Price = await BEP20Price.deploy();
+    await bep20Price.deployed();
 
     const Swap = await ethers.getContractFactory("ArcadeSwapV1");
     swap = await upgrades.deployProxy(
       Swap,
         [
-          arcade.address, tempAddress, tempAddress, tempAddress
+          arcade.address, bep20Price.address
         ],
         {
           kind: "uups",

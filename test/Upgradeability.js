@@ -5,13 +5,20 @@ describe("Upgradeability", function() {
   let admin, addrs;
   beforeEach(async () => {
     const [admin, ...addrs] = await ethers.getSigners();
-    const tempAddress = admin.address;
+    
+    const Token = await ethers.getContractFactory("Arcade");
+    const arcade = await Token.deploy("10000000000000000000000");
+    await arcade.deployed();
+
+    const BEP20Price = await ethers.getContractFactory("MockBEP20Price");
+    const bep20Price = await BEP20Price.deploy();
+    await bep20Price.deployed();
 
     const Swap = await ethers.getContractFactory("ArcadeSwapV1");
     this.swap = await upgrades.deployProxy(
       Swap,
         [
-          tempAddress, tempAddress, tempAddress, tempAddress
+          arcade.address, bep20Price.address
         ],
         {
           kind: "uups",
