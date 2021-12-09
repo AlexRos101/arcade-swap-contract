@@ -15,9 +15,18 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
  */
 contract ArcadeSwapV1 is AbstractArcadeUpgradeable {
     using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address public arcadeToken;
+    IERC20Upgradeable public arcadeToken;
     IBEP20Price public bep20Price;
+
+    struct Commission {
+        uint256 commission1; // 100% in 10000
+        uint256 commission2; // 100% in 10000
+        address treasuryAddress1;
+        address treasuryAddress2;
+    }
+    mapping(uint256 => Commission) internal _commissions;
 
     /**
      * game id => price(in 3 digits for 100%)
@@ -66,7 +75,7 @@ contract ArcadeSwapV1 is AbstractArcadeUpgradeable {
     );
 
     function __ArcadeSwap_init(
-        address _arcadeToken,
+        IERC20Upgradeable _arcadeToken,
         IBEP20Price _bep20Price
     ) public initializer {
         AbstractArcadeUpgradeable.initialize();
@@ -80,173 +89,262 @@ contract ArcadeSwapV1 is AbstractArcadeUpgradeable {
 
     /** 
      * @notice set Arcade backend team's key
-     * @param key Arcade Backend key
+     * @param _key Arcade Backend key
      */
-    function setArcadeBackendKey(string memory key) 
+    function setArcadeBackendKey(string memory _key) 
         external onlyOwner 
     {
-        require(bytes(key).length > 0, "key can't be none string");
-        _arcadeBackendKey = keccak256(abi.encodePacked(key));
+        require(bytes(_key).length > 0, "key can't be none string");
+        _arcadeBackendKey = keccak256(abi.encodePacked(_key));
     }
 
     /** 
      * @notice set individual game backend team's key
-     * @param id game id
-     * @param key game backend key
+     * @param _id game id
+     * @param _key game backend key
     */
-    function setGameBackendKey(uint256 id, string memory key) 
+    function setGameBackendKey(uint256 _id, string memory _key) 
         external onlyOwner 
     {
-        require(id != 0, "game id can't be zero");
-        require(bytes(key).length > 0, "key can't be none string");
-        _gameKeys[id] = keccak256(abi.encodePacked(key));
+        require(_id != 0, "game id can't be zero");
+        require(bytes(_key).length > 0, "key can't be none string");
+        _gameKeys[_id] = keccak256(abi.encodePacked(_key));
+    }
+
+    /**
+     * @notice Set commission per game
+     * @param _id game id
+     * @param _commission1 first commission percent in 10000(100%)
+     * @param _commission2 second commission percent in 10000(100%)
+     * @param _treasury1 first treasury address
+     * @param _treasury2 second treasury address
+     */
+    function setCommission(
+        uint256 _id,
+        uint256 _commission1,
+        uint256 _commission2,
+        address _treasury1,
+        address _treasury2
+    ) external onlyOwner {
+        require(_id != 0, "game id can't be zero");
+        _commissions[_id] = Commission({
+            commission1: _commission1,
+            commission2: _commission2,
+            treasuryAddress1: _treasury1,
+            treasuryAddress2: _treasury2
+        });
+    }
+
+    /**
+     * @notice View commission per game
+     * @param _id game id
+     * @return commission structure
+     */
+    function viewCommission(uint256 _id)
+        external
+        view
+        returns (Commission memory)
+    {
+        require(_id != 0, "game id can't be zero");
+        return _commissions[_id];
     }
 
     /** 
      * @notice deposit Arcade token to game point
-     * @param id game id
-     * @param amount Arcade token amount 
+     * @param _id game id
+     * @param _amount Arcade token amount 
      */
-    function buyGamePoint(uint256 id, uint256 amount) external nonReentrant {
-        require(id != 0, "game id can't be zero");
-        require(amount != 0, "amount can't be zero");
-        require(_gameKeys[id] !=  0, "Not registered game key.");
-        require(gamePointPrice[id] != 0, "Not registered game point price.");
+    function buyGamePoint(uint256 _id, uint256 _amount) external nonReentrant {
+        require(_id != 0, "game id can't be zero");
+        require(_amount != 0, "amount can't be zero");
+        require(_gameKeys[_id] !=  0, "Not registered game key.");
+        require(gamePointPrice[_id] != 0, "Not registered game point price.");
 
-        bool successed = 
-            IERC20Upgradeable(arcadeToken)
-            .transferFrom(msg.sender, address(this), amount);
-        require(successed, "Failed to transfer Arcade token.");
+        // distribute commission
+        uint256 commission1 = _amount.mul(_commissions[_id].commission1).div(
+            10000
+        );
+        uint256 commission2 = _amount.mul(_commissions[_id].commission2).div(
+            10000
+        );
+        if (commission1 > 0) {
+            arcadeToken.safeTransferFrom(
+                msg.sender,
+                _commissions[_id].treasuryAddress1,
+                commission1
+            );
+        }
+        if (commission2 > 0) {
+            arcadeToken.safeTransferFrom(
+                msg.sender,
+                _commissions[_id].treasuryAddress2,
+                commission2
+            );
+        }
+
+        arcadeToken.safeTransferFrom(
+            msg.sender,
+            address(this),
+            _amount.sub(commission1).sub(commission2)
+        );
 
         uint256 rate = bep20Price.getTokenPrice(
-            arcadeToken, 18
-        ).div(gamePointPrice[id]);
-        uint256 internalGamePoint = amount.mul(rate).div(10 ** 15);
+            address(arcadeToken), 18
+        ).div(gamePointPrice[_id]);
+        uint256 internalGamePoint = _amount.mul(rate).div(10 ** 15);
         uint256 gamePoint = internalGamePoint.div(10 ** 18);
 
-        _addDepositInfo(msg.sender, id, amount, internalGamePoint);
+        _addDepositInfo(msg.sender, _id, _amount, internalGamePoint);
 
         console.log("--------BuyGamePoint--------");
-        console.log(id);
-        console.log(amount);
+        console.log(_id);
+        console.log(_amount);
         console.log(gamePoint);
         console.log(rate);
         console.log("----------------------------");
 
-        emit BuyGamePoint(id, amount, gamePoint, rate);
+        emit BuyGamePoint(_id, _amount, gamePoint, rate);
     }
 
     /** 
      * @notice withdraw game point to Arcade token
-     * @param id game id
-     * @param amount amount to withdraw
-     * @param verificationData data to verify the withdraw request
+     * @param _id game id
+     * @param _amount amount to withdraw
+     * @param _verificationData data to verify the withdraw request
      */
     function sellGamePoint(
-        uint256 id,
-        uint256 amount,
-        bytes32 verificationData
+        uint256 _id,
+        uint256 _amount,
+        bytes32 _verificationData
     ) external nonReentrant {
-        bytes32 gameBackendVerification = 
-            keccak256(abi.encodePacked(
-                id,
-                msg.sender,
-                amount,
-                _gameKeys[id]
-            ));
-        bytes32 arcadeBackendVerification = 
-            keccak256(
-                abi.encodePacked(gameBackendVerification, _arcadeBackendKey)
-            );
-        
         require(
-            verificationData == arcadeBackendVerification,
+            _verifyMeta(
+                _verificationData,
+                msg.sender,
+                _id,
+                _amount
+            ),
             "Verification data is incorrect."
         );
 
-        uint256 gamePointRate = getGamePointRate(msg.sender, id);
+        uint256 gamePointRate = getGamePointRate(msg.sender, _id);
 
-        uint256 arcadeAmount = 
-            amount.mul(gamePointRate);
+        uint256 arcadeAmount = _amount.mul(gamePointRate);
 
-        bool success = 
-            IERC20Upgradeable(arcadeToken)
-            .transfer(msg.sender, arcadeAmount);
-        require(success, "Failed to transfer $Arcade.");
+        // distribute commission
+        uint256 commission1 = arcadeAmount.mul(_commissions[_id].commission1).div(
+            10000
+        );
+        uint256 commission2 = arcadeAmount.mul(_commissions[_id].commission2).div(
+            10000
+        );
+        if (commission1 > 0) {
+            arcadeToken.safeTransfer(
+                _commissions[_id].treasuryAddress1,
+                commission1
+            );
+        }
+        if (commission2 > 0) {
+            arcadeToken.safeTransfer(
+                _commissions[_id].treasuryAddress2,
+                commission2
+            );
+        }
+
+        arcadeToken.safeTransfer(msg.sender, arcadeAmount.sub(commission1).sub(
+            commission2
+        ));
 
         console.log("--------SellGamePoint--------");
-        console.log(id);
+        console.log(_id);
         console.log(arcadeAmount);
-        console.log(amount);
+        console.log(_amount);
         console.log(gamePointRate);
         console.log("----------------------------");
 
-        emit SellGamePoint(id, arcadeAmount, amount, gamePointRate);
+        emit SellGamePoint(_id, arcadeAmount, _amount, gamePointRate);
     }
 
     /** 
      * @notice withdraw Arcade token
-     * @param to "to" address of withdraw request
-     * @param amount amount to withdraw
+     * @param _to "to" address of withdraw request
+     * @param _amount amount to withdraw
      */
-    function transferTo(address to, uint256 amount) external onlyOwner {
-        require(to != address(0), "Transfer to zero address.");
-        bool success = 
-            IERC20Upgradeable(arcadeToken)
-            .transfer(to, amount);
-        require(success, "Failed to transfer $Arcade.");
+    function transferTo(address _to, uint256 _amount) external onlyOwner {
+        require(_to != address(0), "Transfer to zero address.");
+        arcadeToken.safeTransfer(_to, _amount);
     }
 
     /** 
      * @notice set price of individual game point in usd
      * registered price = real price * 10**3
-     * @param id game id
-     * @param price game point price
+     * @param _id game id
+     * @param _price game point price
      */
-    function setGamePointPrice(uint256 id, uint256 price) external onlyOwner {
-        require(price != 0, "Price can't be zero.");
-        gamePointPrice[id] = price;
+    function setGamePointPrice(uint256 _id, uint256 _price) external onlyOwner {
+        require(_price != 0, "Price can't be zero.");
+        gamePointPrice[_id] = _price;
+    }
+
+    function _verifyMeta(
+        bytes32 _meta,
+        address _sender,
+        uint256 _id,
+        uint256 _amount
+    ) internal view returns (bool) {
+        bytes32 gameBackendVerification =
+            keccak256(abi.encodePacked(
+                _id,
+                _sender,
+                _amount,
+                _gameKeys[_id]
+            ));
+        bytes32 arcadeBackendVerification =
+            keccak256(
+                abi.encodePacked(gameBackendVerification, _arcadeBackendKey)
+            );
+        return _meta == arcadeBackendVerification;
     }
 
     /**
      * @notice add total deposited Arcade token amount and 
      * total deposited game point
-     * @param from wallet address which is going to deposit
-     * @param id game id
-     * @param tokenAmount deposited token amount
-     * @param gamePoint deposited game point
+     * @param _from wallet address which is going to deposit
+     * @param _id game id
+     * @param _tokenAmount deposited token amount
+     * @param _gamePoint deposited game point
      */
     function _addDepositInfo(
-        address from,
-        uint256 id,
-        uint256 tokenAmount,
-        uint256 gamePoint
+        address _from,
+        uint256 _id,
+        uint256 _tokenAmount,
+        uint256 _gamePoint
     ) internal {
-        require(from != address(0), "Address can't be zero.");
+        require(_from != address(0), "Address can't be zero.");
 
-        _totalDepositedArcade[from][id] += tokenAmount;
-        _totalDepositedGamePoint[from][id] += gamePoint;
+        _totalDepositedArcade[_from][_id] += _tokenAmount;
+        _totalDepositedGamePoint[_from][_id] += _gamePoint;
     }
 
     /**
      * @notice Get game point rate to Arcade token
      * rate = real_rate * 10 ** 18
-     * @param from wallet address to withdraw game point
-     * @param id game id
+     * @param _from wallet address to withdraw game point
+     * @param _id game id
      * @return uint256 returns rate of game point to arcade token
      */
-    function getGamePointRate(address from, uint256 id) 
+    function getGamePointRate(address _from, uint256 _id) 
         public view returns (uint256) 
     {
-        if (_totalDepositedGamePoint[from][id] == 0) {
-            return gamePointPrice[id].mul(10 ** 33).div(
-                bep20Price.getTokenPrice(arcadeToken, 18)
+        if (_totalDepositedGamePoint[_from][_id] == 0) {
+            return gamePointPrice[_id].mul(10 ** 33).div(
+                bep20Price.getTokenPrice(address(arcadeToken), 18)
             );
         }
         
         return 
-            _totalDepositedArcade[from][id]
+            _totalDepositedArcade[_from][_id]
             .mul(10 ** 18)
-            .div(_totalDepositedGamePoint[from][id]);
+            .div(_totalDepositedGamePoint[_from][_id]);
     }
 }
