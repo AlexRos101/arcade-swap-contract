@@ -34,7 +34,7 @@ module.exports = {
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     mainnet: {
-      url: "https://bsc-dataseed.binance.org/",
+      url: "https://bsc-dataseed1.ninicoin.io/",
       chainId: 56,
       gasPrice: 20000000000,
       accounts:
