@@ -83,6 +83,10 @@ contract ArcadeSwapV1 is AbstractArcadeUpgradeable {
         bep20Price = _bep20Price;
     }
 
+    function setArcadeToken(IERC20Upgradeable _arcadeToken) external onlyOwner {
+        arcadeToken = _arcadeToken;
+    }
+
     function setBep20Price(IBEP20Price _bep20Price) external onlyOwner {
         bep20Price = _bep20Price;
     }
