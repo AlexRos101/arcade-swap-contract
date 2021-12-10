@@ -14,10 +14,10 @@ const addresses = {
     busd: "0x8301f2213c0eed49a7e28ae4c3e91722919b8b47"
   },
   testnet: {
-    factory: "0xb7926c0430afb07aa7defde6da862ae0bde767bc",
-    arcade: "0xEA071968Faf66BE3cc424102fE9DE2F63BBCD12D",
-    wbnb: "0xae13d989dac2f0debff460ac112a837c89baa7cd",
-    busd: "0x8301f2213c0eed49a7e28ae4c3e91722919b8b47"
+    factory: "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
+    arcade: "0xfF6269A074Af20D42571407E8E0E6648134F8878",
+    wbnb: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+    busd: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56"
   }
 }
 
