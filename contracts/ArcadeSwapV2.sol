@@ -326,7 +326,7 @@ contract ArcadeSwapV2 is AbstractArcadeUpgradeable {
             ));
         bytes32 arcadeBackendVerification =
             keccak256(
-                abi.encodePacked(gameBackendVerification, _arcadeBackendKey)
+                abi.encodePacked(_snapshot, gameBackendVerification, _arcadeBackendKey)
             );
         return _meta == arcadeBackendVerification;
     }
