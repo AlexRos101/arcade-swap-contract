@@ -6,7 +6,9 @@
     "test": "npx hardhat test",
     "compile": "npx hardhat compile --force",
     "deploy:testnet": "npx hardhat run scripts/deploy.js --network testnet",
-    "deploy:mainnet": "npx hardhat run scripts/deploy.js --network mainnet"
+    "deploy:mainnet": "npx hardhat run scripts/deploy.js --network mainnet",
+    "upgrade2:testnet": "npx hardhat run scripts/deploy-upgrade-v2.js --network testnet",
+    "upgrade2:mainnet": "npx hardhat run scripts/deploy-upgrade-v2.js --network mainnet"
   },
   "keywords": [],
   "author": "",
