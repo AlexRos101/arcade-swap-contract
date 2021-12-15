@@ -3,8 +3,8 @@ node_modules
 coverage
 coverage.json
 typechain
-data
+#data
 
 #Hardhat files
-cache
-artifacts
+#cache
+#artifacts
