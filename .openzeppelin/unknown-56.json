@@ -2,15 +2,15 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0x19daB415ecCfab76CD0976110B6a20Ad54FcEfbB",
-      "txHash": "0xc0000ee1af2b94bf70d71bd54838621a7f4682ba3a7b08dff5dd6d596aeac830",
+      "address": "0x35df48724d1a92e83F67D374F3d93B9Ba58a2630",
+      "txHash": "0x6eacbfd1c606eef705799c8298f809d37f09248b0d5c4ace0d9a2c3f4ff301a5",
       "kind": "uups"
     }
   ],
   "impls": {
     "42485651d8e2cc4a848900b5ab10222407cab3884aee78f158a5764fc91e08dc": {
-      "address": "0xEECc284c6c25A1cd11a31c4f130958Ae8f87efcB",
-      "txHash": "0x0cf9923702f2a6996745c72f605ecd26ea49cd6ea4181e280fdfc612e7e9d18c",
+      "address": "0x8A93917317513411Bc10869b16c17404Cb6715Bd",
+      "txHash": "0x8f5cdc7b50c1a6046c4b9df9936c6c671a044927b822b7f4bd0ae4c5dd068868",
       "layout": {
         "storage": [
           {
@@ -94,7 +94,7 @@
           {
             "contract": "ArcadeSwapV1",
             "label": "bep20Price",
-            "type": "t_contract(IBEP20Price)4014",
+            "type": "t_contract(IBEP20Price)4973",
             "src": "contracts\\ArcadeSwapV1.sol:21"
           },
           {
@@ -138,7 +138,7 @@
           "t_contract(IERC20Upgradeable)939": {
             "label": "contract IERC20Upgradeable"
           },
-          "t_contract(IBEP20Price)4014": {
+          "t_contract(IBEP20Price)4973": {
             "label": "contract IBEP20Price"
           },
           "t_mapping(t_uint256,t_struct(Commission)2942_storage)": {
