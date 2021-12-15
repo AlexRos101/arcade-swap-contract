@@ -94,7 +94,7 @@
           {
             "contract": "ArcadeSwapV1",
             "label": "bep20Price",
-            "type": "t_contract(IBEP20Price)4014",
+            "type": "t_contract(IBEP20Price)4972",
             "src": "contracts\\ArcadeSwapV1.sol:21"
           },
           {
@@ -138,7 +138,7 @@
           "t_contract(IERC20Upgradeable)939": {
             "label": "contract IERC20Upgradeable"
           },
-          "t_contract(IBEP20Price)4014": {
+          "t_contract(IBEP20Price)4972": {
             "label": "contract IBEP20Price"
           },
           "t_mapping(t_uint256,t_struct(Commission)2942_storage)": {
@@ -149,6 +149,205 @@
           },
           "t_struct(Commission)2942_storage": {
             "label": "struct ArcadeSwapV1.Commission",
+            "members": [
+              {
+                "label": "commission1",
+                "type": "t_uint256"
+              },
+              {
+                "label": "commission2",
+                "type": "t_uint256"
+              },
+              {
+                "label": "treasuryAddress1",
+                "type": "t_address"
+              },
+              {
+                "label": "treasuryAddress2",
+                "type": "t_address"
+              }
+            ]
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_mapping(t_uint256,t_bytes32)": {
+            "label": "mapping(uint256 => bytes32)"
+          },
+          "t_mapping(t_address,t_mapping(t_uint256,t_uint256))": {
+            "label": "mapping(address => mapping(uint256 => uint256))"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          }
+        }
+      }
+    },
+    "a4b75f31835e934b1f82f14bd4d4d8cc2d406943d13513d56d07b13ef9094e35": {
+      "address": "0xbCc9fA3A34484bD20D0db4e899a28EE7fDc5EFba",
+      "txHash": "0xd330ab2c816bd8d53c6be21c341ad22492d2c8e20b9aa2ef9d3feafae11a9671",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:37"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:42"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:31"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "_owner",
+            "type": "t_address",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:22"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:82"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "_status",
+            "type": "t_uint256",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:68"
+          },
+          {
+            "contract": "PausableUpgradeable",
+            "label": "_paused",
+            "type": "t_bool",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:29"
+          },
+          {
+            "contract": "PausableUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:97"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\ERC1967\\ERC1967UpgradeUpgradeable.sol:215"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\UUPSUpgradeable.sol:81"
+          },
+          {
+            "contract": "AbstractArcadeUpgradeable",
+            "label": "version",
+            "type": "t_uint256",
+            "src": "contracts\\abstracts\\AbstractArcadeUpgradeable.sol:26"
+          },
+          {
+            "contract": "ArcadeSwapV2",
+            "label": "arcadeToken",
+            "type": "t_contract(IERC20Upgradeable)939",
+            "src": "contracts\\ArcadeSwapV2.sol:13"
+          },
+          {
+            "contract": "ArcadeSwapV2",
+            "label": "bep20Price",
+            "type": "t_contract(IBEP20Price)4972",
+            "src": "contracts\\ArcadeSwapV2.sol:14"
+          },
+          {
+            "contract": "ArcadeSwapV2",
+            "label": "_commissions",
+            "type": "t_mapping(t_uint256,t_struct(Commission)3750_storage)",
+            "src": "contracts\\ArcadeSwapV2.sol:22"
+          },
+          {
+            "contract": "ArcadeSwapV2",
+            "label": "gamePointPrice",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "src": "contracts\\ArcadeSwapV2.sol:29"
+          },
+          {
+            "contract": "ArcadeSwapV2",
+            "label": "_arcadeBackendKey",
+            "type": "t_bytes32",
+            "src": "contracts\\ArcadeSwapV2.sol:31"
+          },
+          {
+            "contract": "ArcadeSwapV2",
+            "label": "_gameKeys",
+            "type": "t_mapping(t_uint256,t_bytes32)",
+            "src": "contracts\\ArcadeSwapV2.sol:33"
+          },
+          {
+            "contract": "ArcadeSwapV2",
+            "label": "_totalDepositedArcade",
+            "type": "t_mapping(t_address,t_mapping(t_uint256,t_uint256))",
+            "src": "contracts\\ArcadeSwapV2.sol:36"
+          },
+          {
+            "contract": "ArcadeSwapV2",
+            "label": "_totalDepositedGamePoint",
+            "type": "t_mapping(t_address,t_mapping(t_uint256,t_uint256))",
+            "src": "contracts\\ArcadeSwapV2.sol:39"
+          },
+          {
+            "contract": "ArcadeSwapV2",
+            "label": "txDuration",
+            "type": "t_uint256",
+            "src": "contracts\\ArcadeSwapV2.sol:43"
+          },
+          {
+            "contract": "ArcadeSwapV2",
+            "label": "_lastTxTime",
+            "type": "t_mapping(t_address,t_mapping(t_uint256,t_uint256))",
+            "src": "contracts\\ArcadeSwapV2.sol:46"
+          }
+        ],
+        "types": {
+          "t_contract(IERC20Upgradeable)939": {
+            "label": "contract IERC20Upgradeable"
+          },
+          "t_contract(IBEP20Price)4972": {
+            "label": "contract IBEP20Price"
+          },
+          "t_mapping(t_uint256,t_struct(Commission)3750_storage)": {
+            "label": "mapping(uint256 => struct ArcadeSwapV2.Commission)"
+          },
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_struct(Commission)3750_storage": {
+            "label": "struct ArcadeSwapV2.Commission",
             "members": [
               {
                 "label": "commission1",
